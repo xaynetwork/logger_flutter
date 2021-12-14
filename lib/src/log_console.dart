@@ -26,13 +26,22 @@ class _WrappedOutput implements LogOutput {
 class LogConsole extends StatefulWidget {
   final bool dark;
   final bool showCloseButton;
+  final Map<Level, Color> colorMap;
 
   static ListQueue<OutputEvent> _outputEventBuffer = ListQueue();
   static bool _initialized = false;
   static final _newLogs = ChangeNotifier();
 
   LogConsole({this.dark = false, this.showCloseButton = false})
-      : assert(_initialized, 'Please call LogConsole.init() first.');
+      : assert(_initialized, 'Please call LogConsole.init() first.'),
+        colorMap = {
+          Level.verbose: Colors.grey,
+          Level.debug: dark ? Colors.white : Colors.black,
+          Level.info: Colors.lightBlue,
+          Level.warning: Colors.orange,
+          Level.error: Colors.red,
+          Level.wtf: Color(0xFFFF1493),
+        };
 
   /// Attach this LogOutput to your logger instance:
   /// `
@@ -109,9 +118,11 @@ class _LogConsoleState extends State<LogConsole> {
       if (!_scrollListenerEnabled) return;
       var scrolledToBottom = _scrollController.offset >=
           _scrollController.position.maxScrollExtent;
-      setState(() {
-        _followBottom = scrolledToBottom;
-      });
+      if (scrolledToBottom != _followBottom) {
+        setState(() {
+          _followBottom = scrolledToBottom;
+        });
+      }
     });
 
     LogConsole._newLogs.addListener(_onNewLogs);
@@ -165,13 +176,13 @@ class _LogConsoleState extends State<LogConsole> {
       debugShowCheckedModeBanner: false,
       theme: widget.dark
           ? ThemeData(
-              brightness: Brightness.dark,
-              accentColor: Colors.blueGrey,
-            )
+        brightness: Brightness.dark,
+        accentColor: Colors.blueGrey,
+      )
           : ThemeData(
-              brightness: Brightness.light,
-              accentColor: Colors.lightBlueAccent,
-            ),
+        brightness: Brightness.light,
+        accentColor: Colors.lightBlueAccent,
+      ),
       home: Scaffold(
         body: SafeArea(
           child: Column(
@@ -206,25 +217,25 @@ class _LogConsoleState extends State<LogConsole> {
   }
 
   Widget _buildLogContent() {
-    final text = StringBuffer();
-    _filteredBuffer.forEach((e) {
-      text.write(e.text);
-      text.write('\n');
-    });
 
     return Container(
       color: widget.dark ? Colors.black : Colors.grey[150],
       child: SingleChildScrollView(
-        scrollDirection: Axis.vertical,
-        controller: _scrollController,
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: SizedBox(
-            width: 1600,
-            child: SelectableText(
-              text.toString(),
-              style: TextStyle(fontSize: _logFontSize),
-            ),
+        scrollDirection: Axis.horizontal,
+        child: SizedBox(
+          width: 1700,
+          child: ListView.builder(
+            controller: _scrollController,
+            itemCount: _filteredBuffer.length,
+            itemBuilder: (_, index) {
+              RenderedEvent event = _filteredBuffer[index];
+              return SelectableText(
+                event.text,
+                style: TextStyle(
+                  color: widget.colorMap[event.level],
+                ),
+              );
+            },
           ),
         ),
       ),
@@ -347,7 +358,11 @@ class _LogConsoleState extends State<LogConsole> {
   }
 
   RenderedEvent _renderEvent(OutputEvent event) {
-    var text = event.lines.join('\n');
+    var text = '';
+    RegExp regExp = RegExp(r'(\[38;5;199m|\[38;5;196m|\[38;5;208m|\[38;5;12m|\[38;5;244m|\[48;5;196m|\[48;5;199m|\p{S}.\[0m|\[0m|\[39m|\[49m)', unicode: true);
+    event.lines.forEach((element) {
+      text = text + element.replaceAll(regExp, '').trim() + '\n';
+    });
     return RenderedEvent(
       _currentId++,
       event.level,
