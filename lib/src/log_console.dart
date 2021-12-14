@@ -223,7 +223,7 @@ class _LogConsoleState extends State<LogConsole> {
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: SizedBox(
-          width: 1600,
+          width: 1700,
           child: ListView.builder(
             controller: _scrollController,
             itemCount: _filteredBuffer.length,
