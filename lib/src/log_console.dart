@@ -104,7 +104,7 @@ class _LogConsoleState extends State<LogConsole> {
   final _filterController = TextEditingController();
 
   Level _filterLevel = Level.verbose;
-  double _logFontSize = 14;
+  double _logFontSize = 8;
 
   var _currentId = 0;
   bool _scrollListenerEnabled = true;
@@ -217,13 +217,19 @@ class _LogConsoleState extends State<LogConsole> {
   }
 
   Widget _buildLogContent() {
+    final double _safeHeight = MediaQuery.of(context).size.height -
+        MediaQuery.of(context).padding.top -
+        MediaQuery.of(context).padding.bottom;
 
     return Container(
       color: widget.dark ? Colors.black : Colors.grey[150],
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
+      child: InteractiveViewer(
+        boundaryMargin: EdgeInsets.all(0),
+        maxScale: 10,
+        constrained: false,
         child: SizedBox(
           width: 1700,
+          height: _safeHeight - 120, // -120 for the top and bottom bars
           child: ListView.builder(
             controller: _scrollController,
             itemCount: _filteredBuffer.length,
@@ -233,6 +239,7 @@ class _LogConsoleState extends State<LogConsole> {
                 event.text,
                 style: TextStyle(
                   color: widget.colorMap[event.level],
+                  fontSize: _logFontSize,
                 ),
               );
             },
@@ -267,9 +274,11 @@ class _LogConsoleState extends State<LogConsole> {
           IconButton(
             icon: Icon(Icons.remove),
             onPressed: () {
-              setState(() {
-                _logFontSize--;
-              });
+              if (_logFontSize != 1) {
+                setState(() {
+                  _logFontSize--;
+                });
+              }
             },
           ),
           if (widget.showCloseButton)
